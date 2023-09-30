@@ -8,8 +8,8 @@ Param(
     [string] $auth = "",
     [pscredential] $credential = $null,
     [string] $licenseFileUrl = "",
-    [string] $insiderSasToken = "",
-    [switch] $fromVSCode
+    [switch] $fromVSCode,
+    [switch] $accept_insiderEula
 )
 
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
@@ -18,12 +18,14 @@ try {
 $webClient = New-Object System.Net.WebClient
 $webClient.CachePolicy = New-Object System.Net.Cache.RequestCachePolicy -argumentList ([System.Net.Cache.RequestCacheLevel]::NoCacheNoStore)
 $webClient.Encoding = [System.Text.Encoding]::UTF8
-Write-Host "Downloading GitHub Helper module"
+$GitHubHelperUrl = 'https://raw.githubusercontent.com/freddydk/AL-Go/issue739/Actions/Github-Helper.psm1'
+Write-Host "Downloading GitHub Helper module from $GitHubHelperUrl"
 $GitHubHelperPath = "$([System.IO.Path]::GetTempFileName()).psm1"
-$webClient.DownloadFile('https://raw.githubusercontent.com/microsoft/AL-Go-Actions/v3.3/Github-Helper.psm1', $GitHubHelperPath)
-Write-Host "Downloading AL-Go Helper script"
+$webClient.DownloadFile($GitHubHelperUrl, $GitHubHelperPath)
+$ALGoHelperUrl = 'https://raw.githubusercontent.com/freddydk/AL-Go/issue739/Actions/AL-Go-Helper.ps1'
+Write-Host "Downloading AL-Go Helper script from $ALGoHelperUrl"
 $ALGoHelperPath = "$([System.IO.Path]::GetTempFileName()).ps1"
-$webClient.DownloadFile('https://raw.githubusercontent.com/microsoft/AL-Go-Actions/v3.3/AL-Go-Helper.ps1', $ALGoHelperPath)
+$webClient.DownloadFile($ALGoHelperUrl, $ALGoHelperPath)
 
 Import-Module $GitHubHelperPath
 . $ALGoHelperPath -local
@@ -54,7 +56,7 @@ The script will also modify launch.json to have a Local Sandbox configuration po
 
 '@
 
-$settings = ReadSettings -baseFolder $baseFolder -project $project -userName $env:USERNAME
+$settings = ReadSettings -baseFolder $baseFolder -project $project -userName $env:USERNAME -workflowName 'localDevEnv'
 
 Write-Host "Checking System Requirements"
 $dockerProcess = (Get-Process "dockerd" -ErrorAction Ignore)
@@ -131,7 +133,7 @@ CreateDevEnv `
     -auth $auth `
     -credential $credential `
     -licenseFileUrl $licenseFileUrl `
-    -insiderSasToken $insiderSasToken
+    -accept_insiderEula:$accept_insiderEula
 }
 catch {
     Write-Host -ForegroundColor Red "Error: $($_.Exception.Message)`nStacktrace: $($_.scriptStackTrace)"
